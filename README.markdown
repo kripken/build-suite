@@ -31,4 +31,5 @@ To run a build, simply enter that directory, and run `src.cpp.o.js` in a JavaScr
 Notes:
 
  * Look for `integrateWasmJS` in the `.js` file, to see how the WebAssembly and JavaScript environments are connected.
+ * The `.wast` files contain imports, which the spec interpreter (which does not have JavaScript embedding support) will raise an error on. If you want to use the spec interpreter to verify that the rest of the `.wast` is valid (which they all should), you can use Binaryen to remove the imports, using `binaryen-shell src.cpp.o.wast -remove-imports -print-after > ok.wast`.
 
