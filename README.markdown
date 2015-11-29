@@ -21,7 +21,7 @@ or `src.c` for C):
  * `src.cpp.o.js`: the main JavaScript file, containing code to load everything, syscall and js-library access to the JavaScript embedding environment, etc.
  * `src.cpp.o.wast`: the compiled C/C++ code in WebAssembly S-Expression format, including both the testcase itself and necessary libc/libc++/etc. components
  * `src.cpp.o.wast.mappedGlobals`: a small metadata file containing global information, needed as asm.js has globals but WebAssembly does not
- * `src.cpp.o.js.mem`: the memory initialization file. (this could be moved into the `.wast` file's memory section, however, keeping it separate allows the same build to optionally run as asm.js)
+ * `src.cpp.o.js.mem`: the memory initialization file (this could be moved into the `.wast` file's memory section, however, keeping it separate allows the same build to optionally run as asm.js)
  * `src.cpp`: the source C/C++ (not needed when running)
  * `src.cpp.o.asm.js`: the compiled C/C++ code in asm.js format (only needed if you modify the build to run in asm.js mode)
  * There may also be a `readme.txt` file, which explains commandline parameters that the program receives.
@@ -31,5 +31,5 @@ To run a build, simply enter that directory, and run `src.cpp.o.js` in a JavaScr
 Notes:
 
  * Look for `integrateWasmJS` in the `.js` file, to see how the WebAssembly and JavaScript environments are connected.
- * The `.wast` files contain imports, which the [spec interpreter](https://github.com/WebAssembly/spec) (which does not have JavaScript embedding support) will raise an error on. If you want to use the spec interpreter to verify that the rest of the `.wast` is valid (which they all should), you can use Binaryen to remove the imports, using `binaryen-shell src.cpp.o.wast -remove-imports -print-after > ok.wast`.
+ * The `.wast` files contain imports, which the [spec interpreter](https://github.com/WebAssembly/spec) (which does not have JavaScript embedding support) will raise an error on. If you want to use the spec interpreter to verify that the rest of the `.wast` is valid (which they all should be), you can use Binaryen to remove the imports, using `binaryen-shell src.cpp.o.wast -remove-imports -print-after > ok.wast`.
 
