@@ -18,8 +18,8 @@ use that.
 Each build contains several files (note: the prefix may be `src.cpp` for C++,
 or `src.c` for C):
 
- * `src.cpp.o.js`: the main JavaScript file, containing code to load everything, syscall access to the JavaScript embedding environment, etc.
- * `src.cpp.o.wast`: the compiled C/C++ code in WebAssembly S-Expression format
+ * `src.cpp.o.js`: the main JavaScript file, containing code to load everything, syscall and js-library access to the JavaScript embedding environment, etc.
+ * `src.cpp.o.wast`: the compiled C/C++ code in WebAssembly S-Expression format, including both the testcase itself and necessary libc/libc++/etc. components
  * `src.cpp.o.wast.mappedGlobals`: a small metadata file containing global information, needed as asm.js has globals but WebAssembly does not
  * `src.cpp.o.js.mem`: the memory initialization file. (this could be moved into the `.wast` file's memory section, however, keeping it separate allows the same build to optionally run as asm.js)
  * `src.cpp`: the source C/C++ (not needed when running)
