@@ -1,0 +1,33 @@
+{
+"ABORT": { "address": 32, "type": 1, "import": 1, "module": "env", "base": "ABORT" }
+,"STACKTOP": { "address": 8, "type": 1, "import": 1, "module": "env", "base": "STACKTOP" }
+,"STACK_MAX": { "address": 16, "type": 1, "import": 1, "module": "env", "base": "STACK_MAX" }
+,"__THREW__": { "address": 48, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"cttz_i8": { "address": 40, "type": 1, "import": 1, "module": "env", "base": "cttz_i8" }
+,"inf": { "address": 88, "type": 4, "import": 1, "module": "global", "base": "Infinity" }
+,"nan": { "address": 80, "type": 4, "import": 1, "module": "global", "base": "NaN" }
+,"setjmpId": { "address": 64, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempBigInt": { "address": 104, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempBigIntD": { "address": 144, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempBigIntI": { "address": 136, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempBigIntP": { "address": 112, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempBigIntR": { "address": 128, "type": 4, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempBigIntS": { "address": 120, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempDouble": { "address": 160, "type": 4, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempDoublePtr": { "address": 24, "type": 1, "import": 1, "module": "env", "base": "tempDoublePtr" }
+,"tempFloat": { "address": 248, "type": 4, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempInt": { "address": 96, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet0": { "address": 168, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet1": { "address": 176, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet2": { "address": 184, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet3": { "address": 192, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet4": { "address": 200, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet5": { "address": 208, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet6": { "address": 216, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet7": { "address": 224, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet8": { "address": 232, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempRet9": { "address": 240, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"tempValue": { "address": 152, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"threwValue": { "address": 56, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+,"undef": { "address": 72, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
+}
