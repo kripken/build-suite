@@ -9,8 +9,8 @@ the embedding web environment.
 
 ## Emscripten
 
-The `emscripten/` directory contains builds from Emscripten, one per subdir.
-The builds are generated using Emscripten's Binaryen integration, which
+The `emscripten/` directory contains builds from [Emscripten](http://emscripten.org), one per subdir.
+The builds are generated using Emscripten's [Binaryen](https://github.com/WebAssembly/binaryen) integration, which
 includes `wasm.js` in the `.js` files, which can load and execute WebAssembly
 in an interpreter, or, if native WebAssembly support is present, it will
 use that.
@@ -31,5 +31,5 @@ To run a build, simply enter that directory, and run `src.cpp.o.js` in a JavaScr
 Notes:
 
  * Look for `integrateWasmJS` in the `.js` file, to see how the WebAssembly and JavaScript environments are connected.
- * The `.wast` files contain imports, which the spec interpreter (which does not have JavaScript embedding support) will raise an error on. If you want to use the spec interpreter to verify that the rest of the `.wast` is valid (which they all should), you can use Binaryen to remove the imports, using `binaryen-shell src.cpp.o.wast -remove-imports -print-after > ok.wast`.
+ * The `.wast` files contain imports, which the [spec interpreter](https://github.com/WebAssembly/spec) (which does not have JavaScript embedding support) will raise an error on. If you want to use the spec interpreter to verify that the rest of the `.wast` is valid (which they all should), you can use Binaryen to remove the imports, using `binaryen-shell src.cpp.o.wast -remove-imports -print-after > ok.wast`.
 
