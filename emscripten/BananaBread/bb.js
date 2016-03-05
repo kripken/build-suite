@@ -83168,6 +83168,14 @@ function integrateWasmJS(Module) {
     },
   };
 
+  var WasmTypes = {
+    none: 0,
+    i32: 1,
+    i64: 2,
+    f32: 3,
+    f64: 4
+  };
+
   var info = {
     global: null,
     env: null,
@@ -83244,11 +83252,15 @@ function integrateWasmJS(Module) {
       // Load the wasm module
       var binary = Module['readBinary']("bb.wast");
       // Create an instance of the module using native support in the JS engine.
-      info['global'] = { 'Math': global.Math };
+      info['global'] = {
+        'Math': global.Math,
+        'NaN': NaN,
+        'Infinity': Infinity
+      };
       info['env'] = env;
       var instance;
       if (typeof Wasm === 'object') {
-        instance = Wasm.instantiateModule(binary.buffer, info);
+        instance = Wasm.instantiateModule(binary, info);
       } else if (typeof wasmEval === 'function') {
         instance = wasmEval(binary.buffer, info);
       } else {
@@ -83263,14 +83275,6 @@ function integrateWasmJS(Module) {
 
     return;
   }
-
-  var WasmTypes = {
-    none: 0,
-    i32: 1,
-    i64: 2,
-    f32: 3,
-    f64: 4
-  };
 
   // Use wasm.js to polyfill and execute code in a wasm interpreter.
   var wasmJS = WasmJS({});
