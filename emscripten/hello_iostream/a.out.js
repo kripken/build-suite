@@ -83142,17 +83142,28 @@ function integrateWasmJS(Module) {
    debugger;
   })
  };
- function flatten(obj) {
-  var ret = {};
-  for (var x in obj) {
-   for (var y in obj[x]) {
-    if (ret[y]) Module["printErr"]("warning: flatten dupe: " + y);
-    if (typeof obj[x][y] === "function") {
-     ret[y] = obj[x][y];
-    }
-   }
+ var info = {
+  global: null,
+  env: null,
+  asm2wasm: asm2wasmImports,
+  parent: Module
+ };
+ function lookupImport(mod, base) {
+  var lookup = info;
+  if (mod.indexOf(".") < 0) {
+   lookup = (lookup || {})[mod];
+  } else {
+   var parts = mod.split(".");
+   lookup = (lookup || {})[parts[0]];
+   lookup = (lookup || {})[parts[1]];
   }
-  return ret;
+  if (base) {
+   lookup = (lookup || {})[base];
+  }
+  if (lookup === undefined) {
+   abort("bad lookupImport to (" + mod + ")." + base);
+  }
+  return lookup;
  }
  function mergeMemory(newBuffer) {
   var oldBuffer = Module["buffer"];
@@ -83171,12 +83182,19 @@ function integrateWasmJS(Module) {
    return Module["buffer"] !== old ? Module["buffer"] : null;
   });
  }
+ var WasmTypes = {
+  none: 0,
+  i32: 1,
+  i64: 2,
+  f32: 3,
+  f64: 4
+ };
  function applyMappedGlobals() {
   var mappedGlobals = JSON.parse(Module["read"]("a.out.wast" + ".mappedGlobals"));
   for (var name in mappedGlobals) {
    var global = mappedGlobals[name];
    if (!global.import) continue;
-   var value = wasmJS["lookupImport"](global.module, global.base);
+   var value = lookupImport(global.module, global.base);
    var address = global.address;
    switch (global.type) {
    case WasmTypes.i32:
@@ -83193,58 +83211,27 @@ function integrateWasmJS(Module) {
    }
   }
  }
- if (typeof WASM === "object" || typeof wasmEval === "function") {
+ if (typeof Wasm === "object") {
   Module["asm"] = (function(global, env, providedBuffer) {
    var binary = Module["readBinary"]("a.out.wast");
-   var importObj = {
-    "global.Math": global.Math,
-    "env": env,
-    "asm2wasm": asm2wasmImports
+   info["global"] = {
+    "Math": global.Math,
+    "NaN": NaN,
+    "Infinity": Infinity
    };
+   info["env"] = env;
    var instance;
-   if (typeof WASM === "object") {
-    instance = WASM.instantiateModule(binary, flatten(importObj));
-   } else if (typeof wasmEval === "function") {
-    instance = wasmEval(binary.buffer, importObj);
-   } else {
-    throw "how to wasm?";
-   }
+   instance = Wasm.instantiateModule(binary, info);
    mergeMemory(instance.memory);
    applyMappedGlobals();
    return instance;
   });
   return;
  }
- var WasmTypes = {
-  none: 0,
-  i32: 1,
-  i64: 2,
-  f32: 3,
-  f64: 4
- };
  var wasmJS = WasmJS({});
  wasmJS["outside"] = Module;
- var info = wasmJS["info"] = {
-  global: null,
-  env: null,
-  asm2wasm: asm2wasmImports,
-  parent: Module
- };
- wasmJS["lookupImport"] = (function(mod, base) {
-  var lookup = info;
-  if (mod.indexOf(".") < 0) {
-   lookup = (lookup || {})[mod];
-  } else {
-   var parts = mod.split(".");
-   lookup = (lookup || {})[parts[0]];
-   lookup = (lookup || {})[parts[1]];
-  }
-  lookup = (lookup || {})[base];
-  if (lookup === undefined) {
-   abort("bad lookupImport to (" + mod + ")." + base);
-  }
-  return lookup;
- });
+ wasmJS["info"] = info;
+ wasmJS["lookupImport"] = lookupImport;
  Module["asm"] = (function(global, env, providedBuffer) {
   assert(providedBuffer === Module["buffer"]);
   info.global = global;
