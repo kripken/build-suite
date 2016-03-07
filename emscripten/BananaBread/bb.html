@@ -1350,6 +1350,9 @@
       };
       xhr.send(null);
 
+      // TODO: proper detect in integrateWasmJS
+      Module.usingWasm = typeof Wasm === 'object';
+
     </script>
 
   </body>

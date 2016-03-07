@@ -11,7 +11,7 @@
 ,"J": { "address": 224, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
 ,"K": { "address": 232, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
 ,"L": { "address": 240, "type": 1, "import": 0, "module": "(null)", "base": "(null)" }
-,"Zi": { "address": 248, "type": 4, "import": 0, "module": "(null)", "base": "(null)" }
+,"_i": { "address": 248, "type": 4, "import": 0, "module": "(null)", "base": "(null)" }
 ,"i": { "address": 8, "type": 1, "import": 1, "module": "env", "base": "STACKTOP" }
 ,"j": { "address": 16, "type": 1, "import": 1, "module": "env", "base": "STACK_MAX" }
 ,"k": { "address": 24, "type": 1, "import": 1, "module": "env", "base": "tempDoublePtr" }

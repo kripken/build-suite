@@ -1158,16 +1158,23 @@ Module["removeRunDependency"] = removeRunDependency;
 Module["preloadedImages"] = {};
 Module["preloadedAudios"] = {};
 var memoryInitializer = null;
-var ASM_CONSTS = [ (function($0, $1) {
+var ASM_CONSTS = [ (function() {
+ {
+  return Module["usingWasm"];
+ }
+}), (function($0, $1) {
  {
   Module.printErr("bad name in getProcAddress: " + [ Pointer_stringify($0), Pointer_stringify($1) ]);
  }
 }) ];
+function _emscripten_asm_const_i(code) {
+ return ASM_CONSTS[code]();
+}
 function _emscripten_asm_const_iii(code, a0, a1) {
  return ASM_CONSTS[code](a0, a1);
 }
 STATIC_BASE = 1024;
-STATICTOP = STATIC_BASE + 756160;
+STATICTOP = STATIC_BASE + 756224;
 __ATINIT__.push({
  func: (function() {
   __GLOBAL__sub_I_world_cpp();
@@ -1266,7 +1273,7 @@ __ATINIT__.push({
  })
 }, {
  func: (function() {
-  __GLOBAL__sub_I_server_cpp_3934();
+  __GLOBAL__sub_I_server_cpp_3936();
  })
 }, {
  func: (function() {
@@ -1386,7 +1393,7 @@ __ATINIT__.push({
  })
 });
 memoryInitializer = "bb.html.mem";
-var STATIC_BUMP = 756160;
+var STATIC_BUMP = 756224;
 var tempDoublePtr = STATICTOP;
 STATICTOP += 16;
 var GL = {
@@ -13273,6 +13280,12 @@ function _emscripten_glGetShaderInfoLog(shader, maxLength, length, infoLog) {
 }
 function _SDL_WarpMouse(x, y) {
  return;
+ var rect = Module["canvas"].getBoundingClientRect();
+ SDL.events.push({
+  type: "mousemove",
+  pageX: x + (window.scrollX + rect.left),
+  pageY: y + (window.scrollY + rect.top)
+ });
 }
 function _emscripten_glGetRenderbufferParameteriv(target, pname, params) {
  if (!params) {
@@ -15298,6 +15311,7 @@ Module.asmLibraryArg = {
  "_emscripten_glUniform2iv": _emscripten_glUniform2iv,
  "_SDL_mutexV": _SDL_mutexV,
  "_glAlphaFunc": _glAlphaFunc,
+ "_emscripten_asm_const_i": _emscripten_asm_const_i,
  "_SDL_GL_SwapBuffers": _SDL_GL_SwapBuffers,
  "_emscripten_glCopyTexSubImage2D": _emscripten_glCopyTexSubImage2D,
  "_SDL_UpperBlit": _SDL_UpperBlit,
@@ -15316,7 +15330,7 @@ var __GLOBAL__sub_I_movie_cpp = Module["__GLOBAL__sub_I_movie_cpp"] = asm["__GLO
 var _main = Module["_main"] = asm["_main"];
 var __GLOBAL__sub_I_serverbrowser_cpp = Module["__GLOBAL__sub_I_serverbrowser_cpp"] = asm["__GLOBAL__sub_I_serverbrowser_cpp"];
 var __GLOBAL__sub_I_dynlight_cpp = Module["__GLOBAL__sub_I_dynlight_cpp"] = asm["__GLOBAL__sub_I_dynlight_cpp"];
-var __GLOBAL__sub_I_console_cpp = Module["__GLOBAL__sub_I_console_cpp"] = asm["__GLOBAL__sub_I_console_cpp"];
+var __GLOBAL__sub_I_server_cpp_3936 = Module["__GLOBAL__sub_I_server_cpp_3936"] = asm["__GLOBAL__sub_I_server_cpp_3936"];
 var __GLOBAL__sub_I_stream_cpp = Module["__GLOBAL__sub_I_stream_cpp"] = asm["__GLOBAL__sub_I_stream_cpp"];
 var __GLOBAL__sub_I_renderva_cpp = Module["__GLOBAL__sub_I_renderva_cpp"] = asm["__GLOBAL__sub_I_renderva_cpp"];
 var __GLOBAL__sub_I_material_cpp = Module["__GLOBAL__sub_I_material_cpp"] = asm["__GLOBAL__sub_I_material_cpp"];
@@ -15347,6 +15361,7 @@ var _fileno = Module["_fileno"] = asm["_fileno"];
 var __GLOBAL__sub_I_decal_cpp = Module["__GLOBAL__sub_I_decal_cpp"] = asm["__GLOBAL__sub_I_decal_cpp"];
 var __GLOBAL__sub_I_water_cpp = Module["__GLOBAL__sub_I_water_cpp"] = asm["__GLOBAL__sub_I_water_cpp"];
 var __GLOBAL__sub_I_normal_cpp = Module["__GLOBAL__sub_I_normal_cpp"] = asm["__GLOBAL__sub_I_normal_cpp"];
+var __GLOBAL__sub_I_console_cpp = Module["__GLOBAL__sub_I_console_cpp"] = asm["__GLOBAL__sub_I_console_cpp"];
 var _bb_splash = Module["_bb_splash"] = asm["_bb_splash"];
 var __GLOBAL__sub_I_glare_cpp = Module["__GLOBAL__sub_I_glare_cpp"] = asm["__GLOBAL__sub_I_glare_cpp"];
 var __GLOBAL__sub_I_weapon_cpp = Module["__GLOBAL__sub_I_weapon_cpp"] = asm["__GLOBAL__sub_I_weapon_cpp"];
@@ -15376,7 +15391,6 @@ var __Z7executePKc = Module["__Z7executePKc"] = asm["__Z7executePKc"];
 var __GLOBAL__sub_I_entities_cpp = Module["__GLOBAL__sub_I_entities_cpp"] = asm["__GLOBAL__sub_I_entities_cpp"];
 var _free = Module["_free"] = asm["_free"];
 var __GLOBAL__sub_I_rendertext_cpp = Module["__GLOBAL__sub_I_rendertext_cpp"] = asm["__GLOBAL__sub_I_rendertext_cpp"];
-var __GLOBAL__sub_I_server_cpp_3934 = Module["__GLOBAL__sub_I_server_cpp_3934"] = asm["__GLOBAL__sub_I_server_cpp_3934"];
 var __GLOBAL__sub_I_scoreboard_cpp = Module["__GLOBAL__sub_I_scoreboard_cpp"] = asm["__GLOBAL__sub_I_scoreboard_cpp"];
 var _memmove = Module["_memmove"] = asm["_memmove"];
 var _strstr = Module["_strstr"] = asm["_strstr"];
@@ -15606,3 +15620,7 @@ if (Module["noInitialRun"]) {
 }
 Module["noExitRuntime"] = true;
 run();
+
+
+
+
