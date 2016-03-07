@@ -83215,7 +83215,14 @@ function integrateWasmJS(Module) {
  }
  if (typeof Wasm === "object") {
   Module["asm"] = (function(global, env, providedBuffer) {
-   var binary = Module["readBinary"]("bb.wasm");
+   var binary;
+   if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+    binary = Module["wasmBinary"];
+    assert(binary, "on the web, we need the wasm binary to be preloaded and set on Module['wasmBinary']. emcc.py will do that for you when generating HTML (but not JS)");
+    binary = new Uint8Array(binary);
+   } else {
+    binary = Module["readBinary"]("bb.wasm");
+   }
    info["global"] = {
     "NaN": NaN,
     "Infinity": Infinity
@@ -84543,7 +84550,7 @@ __ATINIT__.push({
   ___cxx_global_var_init_178();
  })
 });
-memoryInitializer = "bb.js.mem";
+memoryInitializer = "bb.html.mem";
 var STATIC_BUMP = 756160;
 var tempDoublePtr = STATICTOP;
 STATICTOP += 16;
