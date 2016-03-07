@@ -111,39 +111,7 @@ function integrateWasmJS(Module) {
   });
   return;
  }
- var wasmJS = WasmJS({});
- wasmJS["outside"] = Module;
- wasmJS["info"] = info;
- wasmJS["lookupImport"] = lookupImport;
- Module["asm"] = (function(global, env, providedBuffer) {
-  assert(providedBuffer === Module["buffer"]);
-  info.global = global;
-  info.env = env;
-  Module["reallocBuffer"] = (function(size) {
-   var old = Module["buffer"];
-   wasmJS["asmExports"]["__growWasmMemory"](size);
-   return Module["buffer"] !== old ? Module["buffer"] : null;
-  });
-  wasmJS["providedTotalMemory"] = Module["buffer"].byteLength;
-  var code = Module["read"](method == "asm2wasm" ? "a.out.asm.js" : "a.out.wasm");
-  var temp = wasmJS["_malloc"](code.length + 1);
-  wasmJS["writeAsciiToMemory"](code, temp);
-  if (method == "asm2wasm") {
-   wasmJS["_load_asm2wasm"](temp);
-  } else {
-   wasmJS["_load_s_expr2wasm"](temp);
-  }
-  wasmJS["_free"](temp);
-  wasmJS["_instantiate"](temp);
-  if (Module["newBuffer"]) {
-   mergeMemory(Module["newBuffer"]);
-   Module["newBuffer"] = null;
-  }
-  if (method == "wasm-s-parser") {
-   applyMappedGlobals();
-  }
-  return wasmJS["asmExports"];
- });
+ throw new Error("no Wasm found");
 }
 var Module;
 if (!Module) Module = (typeof Module !== "undefined" ? Module : null) || {};
