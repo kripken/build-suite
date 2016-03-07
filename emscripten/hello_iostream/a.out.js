@@ -83167,7 +83167,9 @@ function integrateWasmJS(Module) {
  }
  function mergeMemory(newBuffer) {
   var oldBuffer = Module["buffer"];
-  assert(newBuffer.byteLength >= oldBuffer.byteLength, "we might fail if we allocated more than TOTAL_MEMORY");
+  if (newBuffer.byteLength < oldBuffer.byteLength) {
+   Module["printErr"]("the new buffer in mergeMemory is smaller than the previous one. in native wasm, we should grow memory here");
+  }
   var oldView = new Int8Array(oldBuffer);
   var newView = new Int8Array(newBuffer);
   if (0) {
@@ -83190,7 +83192,7 @@ function integrateWasmJS(Module) {
   f64: 4
  };
  function applyMappedGlobals() {
-  var mappedGlobals = JSON.parse(Module["read"]("a.out.wast" + ".mappedGlobals"));
+  var mappedGlobals = JSON.parse(Module["read"]("a.out.wasm" + ".mappedGlobals"));
   for (var name in mappedGlobals) {
    var global = mappedGlobals[name];
    if (!global.import) continue;
@@ -83213,12 +83215,19 @@ function integrateWasmJS(Module) {
  }
  if (typeof Wasm === "object") {
   Module["asm"] = (function(global, env, providedBuffer) {
-   var binary = Module["readBinary"]("a.out.wast");
+   var binary;
+   if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+    binary = Module["wasmBinary"];
+    assert(binary, "on the web, we need the wasm binary to be preloaded and set on Module['wasmBinary']. emcc.py will do that for you when generating HTML (but not JS)");
+    binary = new Uint8Array(binary);
+   } else {
+    binary = Module["readBinary"]("a.out.wasm");
+   }
    info["global"] = {
-    "Math": global.Math,
     "NaN": NaN,
     "Infinity": Infinity
    };
+   info["global.Math"] = global.Math;
    info["env"] = env;
    var instance;
    instance = Wasm.instantiateModule(binary, info);
@@ -83242,7 +83251,7 @@ function integrateWasmJS(Module) {
    return Module["buffer"] !== old ? Module["buffer"] : null;
   });
   wasmJS["providedTotalMemory"] = Module["buffer"].byteLength;
-  var code = Module["read"](method == "asm2wasm" ? "a.out.asm.js" : "a.out.wast");
+  var code = Module["read"](method == "asm2wasm" ? "a.out.asm.js" : "a.out.wasm");
   var temp = wasmJS["_malloc"](code.length + 1);
   wasmJS["writeAsciiToMemory"](code, temp);
   if (method == "asm2wasm") {
