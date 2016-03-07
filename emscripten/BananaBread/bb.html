@@ -1324,33 +1324,33 @@
     <script async src="game/preload_low.js"></script>
     <script>
 
-          var xhr = new XMLHttpRequest();
-          xhr.open('GET', 'bb.wasm', true);
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', 'bb.wasm', true);
+      xhr.responseType = 'arraybuffer';
+      xhr.onload = function() {
+        Module.wasmBinary = xhr.response;
+
+        (function() {
+          var memoryInitializer = 'bb.html.mem';
+          if (typeof Module['locateFile'] === 'function') {
+            memoryInitializer = Module['locateFile'](memoryInitializer);
+          } else if (Module['memoryInitializerPrefixURL']) {
+            memoryInitializer = Module['memoryInitializerPrefixURL'] + memoryInitializer;
+          }
+          var xhr = Module['memoryInitializerRequest'] = new XMLHttpRequest();
+          xhr.open('GET', memoryInitializer, true);
           xhr.responseType = 'arraybuffer';
-          xhr.onload = function() {
-            Module.wasmBinary = xhr.response;
-
-          (function() {
-            var memoryInitializer = 'bb.html.mem';
-            if (typeof Module['locateFile'] === 'function') {
-              memoryInitializer = Module['locateFile'](memoryInitializer);
-            } else if (Module['memoryInitializerPrefixURL']) {
-              memoryInitializer = Module['memoryInitializerPrefixURL'] + memoryInitializer;
-            }
-            var xhr = Module['memoryInitializerRequest'] = new XMLHttpRequest();
-            xhr.open('GET', memoryInitializer, true);
-            xhr.responseType = 'arraybuffer';
-            xhr.send(null);
-          })();
-
-          var script = document.createElement('script');
-          script.src = "bb.js";
-          document.body.appendChild(script);
-
-          };
           xhr.send(null);
+        })();
 
-</script>
+        var script = document.createElement('script');
+        script.src = "bb.js";
+        document.body.appendChild(script);
+
+      };
+      xhr.send(null);
+
+    </script>
 
   </body>
 </html>
