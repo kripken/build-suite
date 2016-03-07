@@ -1,10 +1,4 @@
-function integrateWasmJS(Module) {
- var method = Module["wasmJSMethod"] || "wasm-s-parser";
- assert(method == "asm2wasm" || method == "wasm-s-parser" || method == "just-asm");
- if (method == "just-asm") {
-  eval(Module["read"]("bb.asm.js"));
-  return;
- }
+function integrateWasm(Module) {
  var asm2wasmImports = {
   "f64-rem": (function(x, y) {
    return x % y;
@@ -87,62 +81,29 @@ function integrateWasmJS(Module) {
    }
   }
  }
- if (typeof Wasm === "object") {
-  Module["asm"] = (function(global, env, providedBuffer) {
-   var binary;
-   if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
-    binary = Module["wasmBinary"];
-    assert(binary, "on the web, we need the wasm binary to be preloaded and set on Module['wasmBinary']. emcc.py will do that for you when generating HTML (but not JS)");
-    binary = new Uint8Array(binary);
-   } else {
-    binary = Module["readBinary"]("bb.wasm");
-   }
-   info["global"] = {
-    "NaN": NaN,
-    "Infinity": Infinity
-   };
-   info["global.Math"] = global.Math;
-   info["env"] = env;
-   var instance;
-   instance = Wasm.instantiateModule(binary, info);
-   mergeMemory(instance.memory);
-   applyMappedGlobals();
-   return instance;
-  });
-  return;
+ if (typeof Wasm !== "object") {
+  throw new Error("No Wasm object found");
  }
- var wasmJS = WasmJS({});
- wasmJS["outside"] = Module;
- wasmJS["info"] = info;
- wasmJS["lookupImport"] = lookupImport;
  Module["asm"] = (function(global, env, providedBuffer) {
-  assert(providedBuffer === Module["buffer"]);
-  info.global = global;
-  info.env = env;
-  Module["reallocBuffer"] = (function(size) {
-   var old = Module["buffer"];
-   wasmJS["asmExports"]["__growWasmMemory"](size);
-   return Module["buffer"] !== old ? Module["buffer"] : null;
-  });
-  wasmJS["providedTotalMemory"] = Module["buffer"].byteLength;
-  var code = Module["read"](method == "asm2wasm" ? "bb.asm.js" : "bb.wasm");
-  var temp = wasmJS["_malloc"](code.length + 1);
-  wasmJS["writeAsciiToMemory"](code, temp);
-  if (method == "asm2wasm") {
-   wasmJS["_load_asm2wasm"](temp);
+  var binary;
+  if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+   binary = Module["wasmBinary"];
+   assert(binary, "on the web, we need the wasm binary to be preloaded and set on Module['wasmBinary']. emcc.py will do that for you when generating HTML (but not JS)");
+   binary = new Uint8Array(binary);
   } else {
-   wasmJS["_load_s_expr2wasm"](temp);
+   binary = Module["readBinary"]("bb.wasm");
   }
-  wasmJS["_free"](temp);
-  wasmJS["_instantiate"](temp);
-  if (Module["newBuffer"]) {
-   mergeMemory(Module["newBuffer"]);
-   Module["newBuffer"] = null;
-  }
-  if (method == "wasm-s-parser") {
-   applyMappedGlobals();
-  }
-  return wasmJS["asmExports"];
+  info["global"] = {
+   "NaN": NaN,
+   "Infinity": Infinity
+  };
+  info["global.Math"] = global.Math;
+  info["env"] = env;
+  var instance;
+  instance = Wasm.instantiateModule(binary, info);
+  mergeMemory(instance.memory);
+  applyMappedGlobals();
+  return instance;
  });
 }
 var Module;
@@ -323,7 +284,7 @@ for (var key in moduleOverrides) {
  }
 }
 moduleOverrides = undefined;
-integrateWasmJS(Module);
+integrateWasm(Module);
 var Runtime = {
  setTempRet0: (function(value) {
   tempRet0 = value;
@@ -13312,12 +13273,6 @@ function _emscripten_glGetShaderInfoLog(shader, maxLength, length, infoLog) {
 }
 function _SDL_WarpMouse(x, y) {
  return;
- var rect = Module["canvas"].getBoundingClientRect();
- SDL.events.push({
-  type: "mousemove",
-  pageX: x + (window.scrollX + rect.left),
-  pageY: y + (window.scrollY + rect.top)
- });
 }
 function _emscripten_glGetRenderbufferParameteriv(target, pname, params) {
  if (!params) {
@@ -15651,7 +15606,3 @@ if (Module["noInitialRun"]) {
 }
 Module["noExitRuntime"] = true;
 run();
-
-
-
-
