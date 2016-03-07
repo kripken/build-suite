@@ -1279,7 +1279,13 @@
         },
         goFullScreen: function() {
           Module.requestFullScreen(true, false);
-          BananaBread.execute('screenres ' + screen.width + ' ' + screen.height);
+        },
+        onFullScreen: function(isFullScreen) {
+          if (isFullScreen) {
+            BananaBread.execute('screenres ' + screen.width + ' ' + screen.height);
+          } else {
+            BananaBread.execute('screenres ' + 640 + ' ' + 480);
+          }
         },
       };
       Module.setStatus('Downloading...');
