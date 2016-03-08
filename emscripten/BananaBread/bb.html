@@ -1456,11 +1456,10 @@
         };
         info["global.Math"] = global.Math;
         info["env"] = env;
-        var instance;
-        instance = Wasm.instantiateModule(binary, info);
-        mergeMemory(instance.memory);
+        var exports = Wasm.instantiateModule(binary, info).exports;
+        mergeMemory(exports.memory);
         applyMappedGlobals();
-        return instance;
+        return exports;
        });
       }
 
