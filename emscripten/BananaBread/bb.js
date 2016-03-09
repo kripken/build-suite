@@ -795,7 +795,6 @@ function stackTrace() {
  return demangleAll(jsStackTrace());
 }
 Module["stackTrace"] = stackTrace;
-var PAGE_SIZE = 4096;
 function alignMemoryPage(x) {
  if (x % 4096 > 0) {
   x += 4096 - x % 4096;
@@ -828,7 +827,7 @@ function enlargeMemory() {
  abortOnCannotGrowMemory();
 }
 var TOTAL_STACK = Module["TOTAL_STACK"] || 5242880;
-var TOTAL_MEMORY = Module["TOTAL_MEMORY"] || 67108864;
+var TOTAL_MEMORY = Module["TOTAL_MEMORY"] || 100663296;
 var totalMemory = 64 * 1024;
 while (totalMemory < TOTAL_MEMORY || totalMemory < 2 * TOTAL_STACK) {
  if (totalMemory < 16 * 1024 * 1024) {
@@ -10965,7 +10964,6 @@ function _emscripten_glVertexAttrib3f(x0, x1, x2, x3) {
 function _SDL_GetThreadID() {
  throw "SDL_GetThreadID";
 }
-function ___cxa_guard_release() {}
 function _emscripten_glDeleteShader(id) {
  if (!id) return;
  var shader = GL.shaders[id];
@@ -10975,13 +10973,6 @@ function _emscripten_glDeleteShader(id) {
  }
  GLctx.deleteShader(shader);
  GL.shaders[id] = null;
-}
-function ___cxa_guard_acquire(variable) {
- if (!HEAP8[variable >> 0]) {
-  HEAP8[variable >> 0] = 1;
-  return 1;
- }
- return 0;
 }
 var _emscripten_GetProcAddress = undefined;
 Module["_emscripten_GetProcAddress"] = _emscripten_GetProcAddress;
@@ -11614,9 +11605,6 @@ function _SDL_GL_SetAttribute(attr, value) {
  }
  SDL.glAttributes[attr] = value;
 }
-function _emscripten_glHint(x0, x1) {
- GLctx.hint(x0, x1);
-}
 function _glLightfv() {
  throw "glLightfv: TODO";
 }
@@ -11806,165 +11794,8 @@ function _emscripten_glUseProgram(program) {
 function _glTexCoord4f() {
  throw "glTexCoord4f: TODO";
 }
-function _sysconf(name) {
- switch (name) {
- case 30:
-  return PAGE_SIZE;
- case 85:
-  return totalMemory / PAGE_SIZE;
- case 132:
- case 133:
- case 12:
- case 137:
- case 138:
- case 15:
- case 235:
- case 16:
- case 17:
- case 18:
- case 19:
- case 20:
- case 149:
- case 13:
- case 10:
- case 236:
- case 153:
- case 9:
- case 21:
- case 22:
- case 159:
- case 154:
- case 14:
- case 77:
- case 78:
- case 139:
- case 80:
- case 81:
- case 82:
- case 68:
- case 67:
- case 164:
- case 11:
- case 29:
- case 47:
- case 48:
- case 95:
- case 52:
- case 51:
- case 46:
-  return 200809;
- case 79:
-  return 0;
- case 27:
- case 246:
- case 127:
- case 128:
- case 23:
- case 24:
- case 160:
- case 161:
- case 181:
- case 182:
- case 242:
- case 183:
- case 184:
- case 243:
- case 244:
- case 245:
- case 165:
- case 178:
- case 179:
- case 49:
- case 50:
- case 168:
- case 169:
- case 175:
- case 170:
- case 171:
- case 172:
- case 97:
- case 76:
- case 32:
- case 173:
- case 35:
-  return -1;
- case 176:
- case 177:
- case 7:
- case 155:
- case 8:
- case 157:
- case 125:
- case 126:
- case 92:
- case 93:
- case 129:
- case 130:
- case 131:
- case 94:
- case 91:
-  return 1;
- case 74:
- case 60:
- case 69:
- case 70:
- case 4:
-  return 1024;
- case 31:
- case 42:
- case 72:
-  return 32;
- case 87:
- case 26:
- case 33:
-  return 2147483647;
- case 34:
- case 1:
-  return 47839;
- case 38:
- case 36:
-  return 99;
- case 43:
- case 37:
-  return 2048;
- case 0:
-  return 2097152;
- case 3:
-  return 65536;
- case 28:
-  return 32768;
- case 44:
-  return 32767;
- case 75:
-  return 16384;
- case 39:
-  return 1e3;
- case 89:
-  return 700;
- case 71:
-  return 256;
- case 40:
-  return 255;
- case 2:
-  return 100;
- case 180:
-  return 64;
- case 25:
-  return 20;
- case 5:
-  return 16;
- case 6:
-  return 6;
- case 73:
-  return 4;
- case 84:
-  {
-   if (typeof navigator === "object") return navigator["hardwareConcurrency"] || 1;
-   return 1;
-  }
- }
- ___setErrNo(ERRNO_CODES.EINVAL);
- return -1;
+function _emscripten_glHint(x0, x1) {
+ GLctx.hint(x0, x1);
 }
 function _emscripten_glFramebufferTexture2D(target, attachment, textarget, texture, level) {
  GLctx.framebufferTexture2D(target, attachment, textarget, GL.textures[texture], level);
@@ -12737,8 +12568,6 @@ var Sockets = {
 function __inet_ntop4_raw(addr) {
  return (addr & 255) + "." + (addr >> 8 & 255) + "." + (addr >> 16 & 255) + "." + (addr >> 24 & 255);
 }
-var _ntohs = undefined;
-Module["_ntohs"] = _ntohs;
 function __inet_ntop6_raw(ints) {
  var str = "";
  var word = 0;
@@ -14259,9 +14088,7 @@ function _time(ptr) {
  }
  return ret;
 }
-function _pthread_self() {
- return 0;
-}
+Module["_pthread_self"] = _pthread_self;
 function _emscripten_glGetBooleanv(name_, p) {
  emscriptenWebGLGet(name_, p, "Boolean");
 }
@@ -14851,7 +14678,6 @@ Module.asmLibraryArg = {
  "_emscripten_glStencilOp": _emscripten_glStencilOp,
  "_emscripten_glBlendEquation": _emscripten_glBlendEquation,
  "_glVertex3f": _glVertex3f,
- "_pthread_self": _pthread_self,
  "_SDL_AddTimer": _SDL_AddTimer,
  "_glClearDepth": _glClearDepth,
  "_TTF_SizeText": _TTF_SizeText,
@@ -14900,7 +14726,6 @@ Module.asmLibraryArg = {
  "_SDL_LockAudio": _SDL_LockAudio,
  "_emscripten_glClear": _emscripten_glClear,
  "_glDrawElements": _glDrawElements,
- "___cxa_guard_release": ___cxa_guard_release,
  "_emscripten_glValidateProgram": _emscripten_glValidateProgram,
  "_emscripten_glUniform4iv": _emscripten_glUniform4iv,
  "___setErrNo": ___setErrNo,
@@ -14974,7 +14799,6 @@ Module.asmLibraryArg = {
  "_emscripten_glDeleteVertexArrays": _emscripten_glDeleteVertexArrays,
  "_emscripten_glReleaseShaderCompiler": _emscripten_glReleaseShaderCompiler,
  "_SDL_RemoveTimer": _SDL_RemoveTimer,
- "___cxa_guard_acquire": ___cxa_guard_acquire,
  "_SDL_RWFromFile": _SDL_RWFromFile,
  "_emscripten_glFrontFace": _emscripten_glFrontFace,
  "_glDeleteProgram": _glDeleteProgram,
@@ -14990,7 +14814,6 @@ Module.asmLibraryArg = {
  "_Mix_PlayChannel": _Mix_PlayChannel,
  "_glTexGenfv": _glTexGenfv,
  "_emscripten_glReadPixels": _emscripten_glReadPixels,
- "_sysconf": _sysconf,
  "_glTexCoord2f": _glTexCoord2f,
  "_emscripten_run_script_int": _emscripten_run_script_int,
  "_glMaterialfv": _glMaterialfv,
@@ -15023,7 +14846,6 @@ Module.asmLibraryArg = {
  "_emscripten_glDeleteShader": _emscripten_glDeleteShader,
  "_glEnable": _glEnable,
  "_glGetString": _glGetString,
- "_SDL_GetThreadID": _SDL_GetThreadID,
  "_emscripten_glGetUniformLocation": _emscripten_glGetUniformLocation,
  "_glPushMatrix": _glPushMatrix,
  "_emscripten_glEnableVertexAttribArray": _emscripten_glEnableVertexAttribArray,
@@ -15040,7 +14862,7 @@ Module.asmLibraryArg = {
  "_Mix_ResumeMusic": _Mix_ResumeMusic,
  "_SDL_Delay": _SDL_Delay,
  "_emscripten_glDrawElements": _emscripten_glDrawElements,
- "___buildEnvironment": ___buildEnvironment,
+ "_SDL_GetThreadID": _SDL_GetThreadID,
  "_glDrawBuffer": _glDrawBuffer,
  "_emulGlBindVertexArray": _emulGlBindVertexArray,
  "_Mix_LoadWAV": _Mix_LoadWAV,
@@ -15130,6 +14952,7 @@ Module.asmLibraryArg = {
  "_glDepthFunc": _glDepthFunc,
  "_Mix_FadeInChannelTimed": _Mix_FadeInChannelTimed,
  "_emscripten_glClearDepthf": _emscripten_glClearDepthf,
+ "___buildEnvironment": ___buildEnvironment,
  "_emscripten_glMatrixMode": _emscripten_glMatrixMode,
  "___syscall10": ___syscall10,
  "_emscripten_glNormalPointer": _emscripten_glNormalPointer,
@@ -15266,6 +15089,7 @@ var __GLOBAL__sub_I_octa_cpp = Module["__GLOBAL__sub_I_octa_cpp"] = asm["__GLOBA
 var _i64Add = Module["_i64Add"] = asm["_i64Add"];
 var __GLOBAL__sub_I_shadowmap_cpp = Module["__GLOBAL__sub_I_shadowmap_cpp"] = asm["__GLOBAL__sub_I_shadowmap_cpp"];
 var __GLOBAL__sub_I_rendermodel_cpp = Module["__GLOBAL__sub_I_rendermodel_cpp"] = asm["__GLOBAL__sub_I_rendermodel_cpp"];
+var _pthread_self = Module["_pthread_self"] = asm["_pthread_self"];
 var __GLOBAL__sub_I_render_cpp = Module["__GLOBAL__sub_I_render_cpp"] = asm["__GLOBAL__sub_I_render_cpp"];
 var __GLOBAL__sub_I_grass_cpp = Module["__GLOBAL__sub_I_grass_cpp"] = asm["__GLOBAL__sub_I_grass_cpp"];
 var __GLOBAL__sub_I_main_cpp = Module["__GLOBAL__sub_I_main_cpp"] = asm["__GLOBAL__sub_I_main_cpp"];
