@@ -130,7 +130,9 @@ function integrateWasmJS(Module) {
    info["global.Math"] = global.Math;
    info["env"] = env;
    var instance;
+   var t = Date.now();
    instance = Wasm.instantiateModule(getBinary(), info);
+   Module.printErr('instantiateModule time: ' + (Date.now() - t));
    exports = instance.exports;
    mergeMemory(exports.memory);
    applyMappedGlobals(wasmBinaryFile);
@@ -2603,7 +2605,9 @@ Module["callMain"] = Module.callMain = function callMain(args) {
  argv.push(0);
  argv = allocate(argv, "i32", ALLOC_NORMAL);
  try {
+  var t = Date.now();
   var ret = Module["_main"](argc, argv, 0);
+  Module.printErr('main time: ' + (Date.now() - t));
   exit(ret, true);
  } catch (e) {
   if (e instanceof ExitStatus) {
