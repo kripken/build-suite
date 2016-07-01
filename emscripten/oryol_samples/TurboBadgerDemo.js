@@ -109,41 +109,45 @@ function integrateWasmJS(Module) {
   }
   return binary;
  }
- function doJustAsm() {
-  if (typeof Module["asm"] !== "function") {
-   eval(Module["read"](asmjsCodeFile));
+ function doJustAsm(global, env, providedBuffer) {
+  if (typeof Module["asm"] !== "function" || Module["asm"] === methodHandler) {
+   if (!Module["asmPreload"]) {
+    eval(Module["read"](asmjsCodeFile));
+   } else {
+    Module["asm"] = Module["asmPreload"];
+   }
   }
   if (typeof Module["asm"] !== "function") {
    Module["printErr"]("asm evalling did not set the module properly");
    return false;
   }
-  return true;
+  return Module["asm"](global, env, providedBuffer);
  }
- function doNativeWasm() {
+ function doNativeWasm(global, env, providedBuffer) {
   if (typeof Wasm !== "object") {
    Module["printErr"]("no native wasm support detected");
    return false;
   }
-  Module["asm"] = (function(global, env, providedBuffer) {
-   global = fixImports(global);
-   env = fixImports(env);
-   info["global"] = {
-    "NaN": NaN,
-    "Infinity": Infinity
-   };
-   info["global.Math"] = global.Math;
-   info["env"] = env;
-   var instance;
-   instance = Wasm.instantiateModule(getBinary(), info);
-   exports = instance.exports;
-   mergeMemory(exports.memory);
-   applyMappedGlobals(wasmBinaryFile);
-   return exports;
-  });
+  info["global"] = {
+   "NaN": NaN,
+   "Infinity": Infinity
+  };
+  info["global.Math"] = global.Math;
+  info["env"] = env;
+  var instance;
+  try {
+   instance = Wasm["instantiateModule"](getBinary(), info);
+  } catch (e) {
+   Module["printErr"]("failed to compile wasm module: " + e);
+   return false;
+  }
+  exports = instance.exports;
+  mergeMemory(exports.memory);
+  applyMappedGlobals(wasmBinaryFile);
   Module["usingWasm"] = true;
-  return true;
+  return exports;
  }
- function doWasmPolyfill(method) {
+ function doWasmPolyfill(global, env, providedBuffer, method) {
   if (typeof WasmJS !== "function") {
    Module["printErr"]("WasmJS not detected - polyfill not bundled?");
    return false;
@@ -152,65 +156,70 @@ function integrateWasmJS(Module) {
   wasmJS["outside"] = Module;
   wasmJS["info"] = info;
   wasmJS["lookupImport"] = lookupImport;
-  Module["asm"] = (function(global, env, providedBuffer) {
-   global = fixImports(global);
-   env = fixImports(env);
-   assert(providedBuffer === Module["buffer"]);
-   info.global = global;
-   info.env = env;
-   wasmJS["providedTotalMemory"] = Module["buffer"].byteLength;
-   var code;
-   if (method === "interpret-binary") {
-    code = getBinary();
-   } else {
-    code = Module["read"](method == "interpret-asm2wasm" ? asmjsCodeFile : wasmTextFile);
-   }
-   var temp;
-   if (method == "interpret-asm2wasm") {
-    temp = wasmJS["_malloc"](code.length + 1);
-    wasmJS["writeAsciiToMemory"](code, temp);
-    wasmJS["_load_asm2wasm"](temp);
-   } else if (method === "interpret-s-expr") {
-    temp = wasmJS["_malloc"](code.length + 1);
-    wasmJS["writeAsciiToMemory"](code, temp);
-    wasmJS["_load_s_expr2wasm"](temp);
-   } else if (method === "interpret-binary") {
-    temp = wasmJS["_malloc"](code.length);
-    wasmJS["HEAPU8"].set(code, temp);
-    wasmJS["_load_binary2wasm"](temp, code.length);
-   } else {
-    throw "what? " + method;
-   }
-   wasmJS["_free"](temp);
-   wasmJS["_instantiate"](temp);
-   if (Module["newBuffer"]) {
-    mergeMemory(Module["newBuffer"]);
-    Module["newBuffer"] = null;
-   }
-   if (method == "interpret-s-expr") {
-    applyMappedGlobals(wasmTextFile);
-   } else if (method == "interpret-binary") {
-    applyMappedGlobals(wasmBinaryFile);
-   }
-   exports = wasmJS["asmExports"];
-   return exports;
-  });
-  return true;
- }
- var methods = method.split(",");
- for (var i = 0; i < methods.length; i++) {
-  var curr = methods[i];
-  if (curr === "native-wasm") {
-   if (doNativeWasm()) return;
-  } else if (curr === "asmjs") {
-   if (doJustAsm()) return;
-  } else if (curr === "interpret-asm2wasm" || curr === "interpret-s-expr" || curr === "interpret-binary") {
-   if (doWasmPolyfill(curr)) return;
+  assert(providedBuffer === Module["buffer"]);
+  info.global = global;
+  info.env = env;
+  wasmJS["providedTotalMemory"] = Module["buffer"].byteLength;
+  var code;
+  if (method === "interpret-binary") {
+   code = getBinary();
   } else {
-   throw "bad method: " + curr;
+   code = Module["read"](method == "interpret-asm2wasm" ? asmjsCodeFile : wasmTextFile);
   }
+  var temp;
+  if (method == "interpret-asm2wasm") {
+   temp = wasmJS["_malloc"](code.length + 1);
+   wasmJS["writeAsciiToMemory"](code, temp);
+   wasmJS["_load_asm2wasm"](temp);
+  } else if (method === "interpret-s-expr") {
+   temp = wasmJS["_malloc"](code.length + 1);
+   wasmJS["writeAsciiToMemory"](code, temp);
+   wasmJS["_load_s_expr2wasm"](temp);
+  } else if (method === "interpret-binary") {
+   temp = wasmJS["_malloc"](code.length);
+   wasmJS["HEAPU8"].set(code, temp);
+   wasmJS["_load_binary2wasm"](temp, code.length);
+  } else {
+   throw "what? " + method;
+  }
+  wasmJS["_free"](temp);
+  wasmJS["_instantiate"](temp);
+  if (Module["newBuffer"]) {
+   mergeMemory(Module["newBuffer"]);
+   Module["newBuffer"] = null;
+  }
+  if (method == "interpret-s-expr") {
+   applyMappedGlobals(wasmTextFile);
+  } else if (method == "interpret-binary") {
+   applyMappedGlobals(wasmBinaryFile);
+  }
+  exports = wasmJS["asmExports"];
+  return exports;
  }
- throw "no wasm method succeeded";
+ Module["asmPreload"] = Module["asm"];
+ Module["asm"] = (function(global, env, providedBuffer) {
+  global = fixImports(global);
+  env = fixImports(env);
+  var exports;
+  var methods = method.split(",");
+  for (var i = 0; i < methods.length; i++) {
+   var curr = methods[i];
+   Module["printErr"]("trying binaryen method: " + curr);
+   if (curr === "native-wasm") {
+    if (exports = doNativeWasm(global, env, providedBuffer)) break;
+   } else if (curr === "asmjs") {
+    if (exports = doJustAsm(global, env, providedBuffer)) break;
+   } else if (curr === "interpret-asm2wasm" || curr === "interpret-s-expr" || curr === "interpret-binary") {
+    if (exports = doWasmPolyfill(global, env, providedBuffer, curr)) break;
+   } else {
+    throw "bad method: " + curr;
+   }
+  }
+  if (!exports) throw "no binaryen method succeeded";
+  Module["printErr"]("binaryen method succeeded.");
+  return exports;
+ });
+ var methodHandler = Module["asm"];
 }
 var Module;
 if (!Module) Module = (typeof Module !== "undefined" ? Module : null) || {};
@@ -1063,8 +1072,9 @@ if (Module["buffer"]) {
  buffer = new ArrayBuffer(TOTAL_MEMORY);
 }
 updateGlobalBufferViews();
-HEAP32[0] = 255;
-if (HEAPU8[0] !== 255 || HEAPU8[3] !== 0) throw "Typed arrays 2 must be run on a little-endian system";
+HEAP32[0] = 1668509029;
+HEAP16[1] = 25459;
+if (HEAPU8[2] !== 115 || HEAPU8[3] !== 99) throw "Runtime error: expected the system to be little-endian!";
 Module["HEAP"] = HEAP;
 Module["buffer"] = buffer;
 Module["HEAP8"] = HEAP8;
@@ -1266,14 +1276,10 @@ Module["preloadedAudios"] = {};
 var memoryInitializer = null;
 var ASM_CONSTS = [];
 STATIC_BASE = 1024;
-STATICTOP = STATIC_BASE + 49744;
-__ATINIT__.push({
- func: (function() {
-  __GLOBAL__sub_I_ThreadedQueue_cc();
- })
-});
+STATICTOP = STATIC_BASE + 48608;
+__ATINIT__.push();
 memoryInitializer = "TurboBadgerDemo.html.mem";
-var STATIC_BUMP = 49744;
+var STATIC_BUMP = 48608;
 var tempDoublePtr = STATICTOP;
 STATICTOP += 16;
 var JSEvents = {
@@ -1288,6 +1294,8 @@ var JSEvents = {
  pointerlockChangeEvent: 0,
  visibilityChangeEvent: 0,
  touchEvent: 0,
+ lastGamepadState: null,
+ lastGamepadStateFrame: null,
  previousFullscreenElement: null,
  previousScreenX: null,
  previousScreenY: null,
@@ -1517,7 +1525,7 @@ var JSEvents = {
    var e = event || window.event;
    JSEvents.fillMouseEventData(JSEvents.wheelEvent, e, target);
    HEAPF64[JSEvents.wheelEvent + 72 >> 3] = e["wheelDeltaX"];
-   HEAPF64[JSEvents.wheelEvent + 80 >> 3] = -e["wheelDeltaY"];
+   HEAPF64[JSEvents.wheelEvent + 80 >> 3] = -(e["wheelDeltaY"] ? e["wheelDeltaY"] : e["wheelDelta"]);
    HEAPF64[JSEvents.wheelEvent + 88 >> 3] = 0;
    HEAP32[JSEvents.wheelEvent + 96 >> 2] = 0;
    var shouldCancel = Runtime.dynCall("iiii", callbackfunc, [ eventTypeId, JSEvents.wheelEvent, userData ]);
@@ -1720,7 +1728,7 @@ var JSEvents = {
   JSEvents.registerOrRemoveHandler(eventHandler);
  }),
  fullscreenEnabled: (function() {
-  return document.fullscreenEnabled || document.mozFullscreenEnabled || document.mozFullScreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled;
+  return document.fullscreenEnabled || document.mozFullScreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled;
  }),
  fillFullscreenChangeEventData: (function(eventStruct, e) {
   var fullscreenElement = document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
@@ -1860,6 +1868,29 @@ var JSEvents = {
    var e = event || window.event;
    JSEvents.fillPointerlockChangeEventData(JSEvents.pointerlockChangeEvent, e);
    var shouldCancel = Runtime.dynCall("iiii", callbackfunc, [ eventTypeId, JSEvents.pointerlockChangeEvent, userData ]);
+   if (shouldCancel) {
+    e.preventDefault();
+   }
+  });
+  var eventHandler = {
+   target: target,
+   allowsDeferredCalls: false,
+   eventTypeString: eventTypeString,
+   callbackfunc: callbackfunc,
+   handlerFunc: handlerFunc,
+   useCapture: useCapture
+  };
+  JSEvents.registerOrRemoveHandler(eventHandler);
+ }),
+ registerPointerlockErrorEventCallback: (function(target, userData, useCapture, callbackfunc, eventTypeId, eventTypeString) {
+  if (!target) {
+   target = document;
+  } else {
+   target = JSEvents.findEventTarget(target);
+  }
+  var handlerFunc = (function(event) {
+   var e = event || window.event;
+   var shouldCancel = Runtime.dynCall("iiii", callbackfunc, [ eventTypeId, 0, userData ]);
    if (shouldCancel) {
     e.preventDefault();
    }
@@ -2334,95 +2365,6 @@ function _glClearColor(x0, x1, x2, x3) {
  GLctx.clearColor(x0, x1, x2, x3);
 }
 Module["_i64Add"] = _i64Add;
-function __ZSt18uncaught_exceptionv() {
- return !!__ZSt18uncaught_exceptionv.uncaught_exception;
-}
-var EXCEPTIONS = {
- last: 0,
- caught: [],
- infos: {},
- deAdjust: (function(adjusted) {
-  if (!adjusted || EXCEPTIONS.infos[adjusted]) return adjusted;
-  for (var ptr in EXCEPTIONS.infos) {
-   var info = EXCEPTIONS.infos[ptr];
-   if (info.adjusted === adjusted) {
-    return ptr;
-   }
-  }
-  return adjusted;
- }),
- addRef: (function(ptr) {
-  if (!ptr) return;
-  var info = EXCEPTIONS.infos[ptr];
-  info.refcount++;
- }),
- decRef: (function(ptr) {
-  if (!ptr) return;
-  var info = EXCEPTIONS.infos[ptr];
-  assert(info.refcount > 0);
-  info.refcount--;
-  if (info.refcount === 0) {
-   if (info.destructor) {
-    Runtime.dynCall("vi", info.destructor, [ ptr ]);
-   }
-   delete EXCEPTIONS.infos[ptr];
-   ___cxa_free_exception(ptr);
-  }
- }),
- clearRef: (function(ptr) {
-  if (!ptr) return;
-  var info = EXCEPTIONS.infos[ptr];
-  info.refcount = 0;
- })
-};
-function ___resumeException(ptr) {
- if (!EXCEPTIONS.last) {
-  EXCEPTIONS.last = ptr;
- }
- EXCEPTIONS.clearRef(EXCEPTIONS.deAdjust(ptr));
- throw ptr + " - Exception catching is disabled, this exception cannot be caught. Compile with -s DISABLE_EXCEPTION_CATCHING=0 or DISABLE_EXCEPTION_CATCHING=2 to catch.";
-}
-function ___cxa_find_matching_catch() {
- var thrown = EXCEPTIONS.last;
- if (!thrown) {
-  return (asm["setTempRet0"](0), 0) | 0;
- }
- var info = EXCEPTIONS.infos[thrown];
- var throwntype = info.type;
- if (!throwntype) {
-  return (asm["setTempRet0"](0), thrown) | 0;
- }
- var typeArray = Array.prototype.slice.call(arguments);
- var pointer = Module["___cxa_is_pointer_type"](throwntype);
- if (!___cxa_find_matching_catch.buffer) ___cxa_find_matching_catch.buffer = _malloc(4);
- HEAP32[___cxa_find_matching_catch.buffer >> 2] = thrown;
- thrown = ___cxa_find_matching_catch.buffer;
- for (var i = 0; i < typeArray.length; i++) {
-  if (typeArray[i] && Module["___cxa_can_catch"](typeArray[i], throwntype, thrown)) {
-   thrown = HEAP32[thrown >> 2];
-   info.adjusted = thrown;
-   return (asm["setTempRet0"](typeArray[i]), thrown) | 0;
-  }
- }
- thrown = HEAP32[thrown >> 2];
- return (asm["setTempRet0"](throwntype), thrown) | 0;
-}
-function ___cxa_throw(ptr, type, destructor) {
- EXCEPTIONS.infos[ptr] = {
-  ptr: ptr,
-  adjusted: ptr,
-  type: type,
-  destructor: destructor,
-  refcount: 0
- };
- EXCEPTIONS.last = ptr;
- if (!("uncaught_exception" in __ZSt18uncaught_exceptionv)) {
-  __ZSt18uncaught_exceptionv.uncaught_exception = 1;
- } else {
-  __ZSt18uncaught_exceptionv.uncaught_exception++;
- }
- throw ptr + " - Exception catching is disabled, this exception cannot be caught. Compile with -s DISABLE_EXCEPTION_CATCHING=0 or DISABLE_EXCEPTION_CATCHING=2 to catch.";
-}
 function _emscripten_set_touchmove_callback(target, userData, useCapture, callbackfunc) {
  JSEvents.registerTouchEventCallback(target, userData, useCapture, callbackfunc, 24, "touchmove");
  return 0;
@@ -2586,8 +2528,16 @@ function _glGetString(name_) {
  switch (name_) {
  case 7936:
  case 7937:
- case 7938:
+ case 37445:
+ case 37446:
   ret = allocate(intArrayFromString(GLctx.getParameter(name_)), "i8", ALLOC_NORMAL);
+  break;
+ case 7938:
+  var glVersion = GLctx.getParameter(GLctx.VERSION);
+  {
+   glVersion = "OpenGL ES 2.0 (" + glVersion + ")";
+  }
+  ret = allocate(intArrayFromString(glVersion), "i8", ALLOC_NORMAL);
   break;
  case 7939:
   var exts = GLctx.getSupportedExtensions();
@@ -2600,7 +2550,12 @@ function _glGetString(name_) {
   break;
  case 35724:
   var glslVersion = GLctx.getParameter(GLctx.SHADING_LANGUAGE_VERSION);
-  if (glslVersion.indexOf("WebGL GLSL ES 1.0") != -1) glslVersion = "OpenGL ES GLSL ES 1.00 (WebGL)";
+  var ver_re = /^WebGL GLSL ES ([0-9]\.[0-9][0-9]?)(?:$| .*)/;
+  var ver_num = glslVersion.match(ver_re);
+  if (ver_num !== null) {
+   if (ver_num[1].length == 3) ver_num[1] = ver_num[1] + "0";
+   glslVersion = "OpenGL ES GLSL ES " + ver_num[1] + " (" + glslVersion + ")";
+  }
   ret = allocate(intArrayFromString(glslVersion), "i8", ALLOC_NORMAL);
   break;
  default:
@@ -2830,7 +2785,7 @@ var Browser = {
    if (Module["postMainLoop"]) Module["postMainLoop"]();
   })
  },
- isFullScreen: false,
+ isFullscreen: false,
  pointerLock: false,
  moduleContextCreatedCallbacks: [],
  workers: [],
@@ -3010,7 +2965,6 @@ var Browser = {
    if (contextHandle) {
     ctx = GL.getContext(contextHandle).GLctx;
    }
-   canvas.style.backgroundColor = "black";
   } else {
    ctx = canvas.getContext("2d");
   }
@@ -3028,10 +2982,10 @@ var Browser = {
   return ctx;
  }),
  destroyContext: (function(canvas, useWebGL, setInModule) {}),
- fullScreenHandlersInstalled: false,
+ fullscreenHandlersInstalled: false,
  lockPointer: undefined,
  resizeCanvas: undefined,
- requestFullScreen: (function(lockPointer, resizeCanvas, vrDevice) {
+ requestFullscreen: (function(lockPointer, resizeCanvas, vrDevice) {
   Browser.lockPointer = lockPointer;
   Browser.resizeCanvas = resizeCanvas;
   Browser.vrDevice = vrDevice;
@@ -3039,45 +2993,53 @@ var Browser = {
   if (typeof Browser.resizeCanvas === "undefined") Browser.resizeCanvas = false;
   if (typeof Browser.vrDevice === "undefined") Browser.vrDevice = null;
   var canvas = Module["canvas"];
-  function fullScreenChange() {
-   Browser.isFullScreen = false;
+  function fullscreenChange() {
+   Browser.isFullscreen = false;
    var canvasContainer = canvas.parentNode;
-   if ((document["webkitFullScreenElement"] || document["webkitFullscreenElement"] || document["mozFullScreenElement"] || document["mozFullscreenElement"] || document["fullScreenElement"] || document["fullscreenElement"] || document["msFullScreenElement"] || document["msFullscreenElement"] || document["webkitCurrentFullScreenElement"]) === canvasContainer) {
-    canvas.cancelFullScreen = document["cancelFullScreen"] || document["mozCancelFullScreen"] || document["webkitCancelFullScreen"] || document["msExitFullscreen"] || document["exitFullscreen"] || (function() {});
-    canvas.cancelFullScreen = canvas.cancelFullScreen.bind(document);
+   if ((document["fullscreenElement"] || document["mozFullScreenElement"] || document["msFullscreenElement"] || document["webkitFullscreenElement"] || document["webkitCurrentFullScreenElement"]) === canvasContainer) {
+    canvas.exitFullscreen = document["exitFullscreen"] || document["cancelFullScreen"] || document["mozCancelFullScreen"] || document["msExitFullscreen"] || document["webkitCancelFullScreen"] || (function() {});
+    canvas.exitFullscreen = canvas.exitFullscreen.bind(document);
     if (Browser.lockPointer) canvas.requestPointerLock();
-    Browser.isFullScreen = true;
-    if (Browser.resizeCanvas) Browser.setFullScreenCanvasSize();
+    Browser.isFullscreen = true;
+    if (Browser.resizeCanvas) Browser.setFullscreenCanvasSize();
    } else {
     canvasContainer.parentNode.insertBefore(canvas, canvasContainer);
     canvasContainer.parentNode.removeChild(canvasContainer);
     if (Browser.resizeCanvas) Browser.setWindowedCanvasSize();
    }
-   if (Module["onFullScreen"]) Module["onFullScreen"](Browser.isFullScreen);
+   if (Module["onFullScreen"]) Module["onFullScreen"](Browser.isFullscreen);
+   if (Module["onFullscreen"]) Module["onFullscreen"](Browser.isFullscreen);
    Browser.updateCanvasDimensions(canvas);
   }
-  if (!Browser.fullScreenHandlersInstalled) {
-   Browser.fullScreenHandlersInstalled = true;
-   document.addEventListener("fullscreenchange", fullScreenChange, false);
-   document.addEventListener("mozfullscreenchange", fullScreenChange, false);
-   document.addEventListener("webkitfullscreenchange", fullScreenChange, false);
-   document.addEventListener("MSFullscreenChange", fullScreenChange, false);
+  if (!Browser.fullscreenHandlersInstalled) {
+   Browser.fullscreenHandlersInstalled = true;
+   document.addEventListener("fullscreenchange", fullscreenChange, false);
+   document.addEventListener("mozfullscreenchange", fullscreenChange, false);
+   document.addEventListener("webkitfullscreenchange", fullscreenChange, false);
+   document.addEventListener("MSFullscreenChange", fullscreenChange, false);
   }
   var canvasContainer = document.createElement("div");
   canvas.parentNode.insertBefore(canvasContainer, canvas);
   canvasContainer.appendChild(canvas);
-  canvasContainer.requestFullScreen = canvasContainer["requestFullScreen"] || canvasContainer["mozRequestFullScreen"] || canvasContainer["msRequestFullscreen"] || (canvasContainer["webkitRequestFullScreen"] ? (function() {
-   canvasContainer["webkitRequestFullScreen"](Element["ALLOW_KEYBOARD_INPUT"]);
-  }) : null) || (canvasContainer["webkitRequestFullscreen"] ? (function() {
+  canvasContainer.requestFullscreen = canvasContainer["requestFullscreen"] || canvasContainer["mozRequestFullScreen"] || canvasContainer["msRequestFullscreen"] || (canvasContainer["webkitRequestFullscreen"] ? (function() {
    canvasContainer["webkitRequestFullscreen"](Element["ALLOW_KEYBOARD_INPUT"]);
+  }) : null) || (canvasContainer["webkitRequestFullScreen"] ? (function() {
+   canvasContainer["webkitRequestFullScreen"](Element["ALLOW_KEYBOARD_INPUT"]);
   }) : null);
   if (vrDevice) {
-   canvasContainer.requestFullScreen({
+   canvasContainer.requestFullscreen({
     vrDisplay: vrDevice
    });
   } else {
-   canvasContainer.requestFullScreen();
+   canvasContainer.requestFullscreen();
   }
+ }),
+ requestFullScreen: (function(lockPointer, resizeCanvas, vrDevice) {
+  Module.printErr("Browser.requestFullScreen() is deprecated. Please call Browser.requestFullscreen instead.");
+  Browser.requestFullScreen = (function(lockPointer, resizeCanvas, vrDevice) {
+   return Browser.requestFullscreen(lockPointer, resizeCanvas, vrDevice);
+  });
+  return Browser.requestFullscreen(lockPointer, resizeCanvas, vrDevice);
  }),
  nextRAF: 0,
  fakeRequestAnimationFrame: (function(func) {
@@ -3281,7 +3243,7 @@ var Browser = {
  }),
  windowedWidth: 0,
  windowedHeight: 0,
- setFullScreenCanvasSize: (function() {
+ setFullscreenCanvasSize: (function() {
   if (typeof SDL != "undefined") {
    var flags = HEAPU32[SDL.screen + Runtime.QUANTUM_SIZE * 0 >> 2];
    flags = flags | 8388608;
@@ -3314,7 +3276,7 @@ var Browser = {
     h = Math.round(w / Module["forcedAspectRatio"]);
    }
   }
-  if ((document["webkitFullScreenElement"] || document["webkitFullscreenElement"] || document["mozFullScreenElement"] || document["mozFullscreenElement"] || document["fullScreenElement"] || document["fullscreenElement"] || document["msFullScreenElement"] || document["msFullscreenElement"] || document["webkitCurrentFullScreenElement"]) === canvas.parentNode && typeof screen != "undefined") {
+  if ((document["fullscreenElement"] || document["mozFullScreenElement"] || document["msFullscreenElement"] || document["webkitFullscreenElement"] || document["webkitCurrentFullScreenElement"]) === canvas.parentNode && typeof screen != "undefined") {
    var factor = Math.min(screen.width / w, screen.height / h);
    w = Math.round(w * factor);
    h = Math.round(h * factor);
@@ -3356,7 +3318,6 @@ function _glUniform4f(location, v0, v1, v2, v3) {
  location = GL.uniforms[location];
  GLctx.uniform4f(location, v0, v1, v2, v3);
 }
-function ___gxx_personality_v0() {}
 function _glDeleteTextures(n, textures) {
  for (var i = 0; i < n; i++) {
   var id = HEAP32[textures + i * 4 >> 2];
@@ -3622,10 +3583,7 @@ function emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, int
   break;
  default:
   GL.recordError(1280);
-  return {
-   pixels: null,
-   internalFormat: 0
-  };
+  return null;
  }
  switch (type) {
  case 5121:
@@ -3649,35 +3607,31 @@ function emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, int
   break;
  default:
   GL.recordError(1280);
-  return {
-   pixels: null,
-   internalFormat: 0
-  };
+  return null;
  }
  var bytes = emscriptenWebGLComputeImageSize(width, height, sizePerPixel, GL.unpackAlignment);
- if (type == 5121) {
-  pixels = HEAPU8.subarray(pixels, pixels + bytes);
- } else if (type == 5126) {
-  pixels = HEAPF32.subarray(pixels >> 2, pixels + bytes >> 2);
- } else if (type == 5125 || type == 34042) {
-  pixels = HEAPU32.subarray(pixels >> 2, pixels + bytes >> 2);
- } else {
-  pixels = HEAPU16.subarray(pixels >> 1, pixels + bytes >> 1);
+ switch (type) {
+ case 5121:
+  return HEAPU8.subarray(pixels, pixels + bytes);
+ case 5126:
+  return HEAPF32.subarray(pixels >> 2, pixels + bytes >> 2);
+ case 5125:
+ case 34042:
+  return HEAPU32.subarray(pixels >> 2, pixels + bytes >> 2);
+ case 5123:
+ case 33635:
+ case 32819:
+ case 32820:
+ case 36193:
+  return HEAPU16.subarray(pixels >> 1, pixels + bytes >> 1);
+ default:
+  GL.recordError(1280);
+  return null;
  }
- return {
-  pixels: pixels,
-  internalFormat: internalFormat
- };
 }
 function _glTexImage2D(target, level, internalFormat, width, height, border, format, type, pixels) {
- var pixelData;
- if (pixels) {
-  var data = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat);
-  pixelData = data.pixels;
-  internalFormat = data.internalFormat;
- } else {
-  pixelData = null;
- }
+ var pixelData = null;
+ if (pixels) pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat);
  GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, pixelData);
 }
 function _glDisable(x0) {
@@ -3932,6 +3886,7 @@ function _glUniform4fv(location, count, value) {
  }
  GLctx.uniform4fv(location, view);
 }
+var _llvm_fabs_f32 = Math_abs;
 function _emscripten_set_keyup_callback(target, userData, useCapture, callbackfunc) {
  JSEvents.registerKeyEventCallback(target, userData, useCapture, callbackfunc, 3, "keyup");
  return 0;
@@ -3982,14 +3937,6 @@ function _emscripten_set_wheel_callback(target, userData, useCapture, callbackfu
 }
 function _glAttachShader(program, shader) {
  GLctx.attachShader(GL.programs[program], GL.shaders[shader]);
-}
-function _malloc(bytes) {
- var ptr = Runtime.dynamicAlloc(bytes + 8);
- return ptr + 8 & 4294967288;
-}
-Module["_malloc"] = _malloc;
-function ___cxa_allocate_exception(size) {
- return _malloc(size);
 }
 function _glDeleteShader(id) {
  if (!id) return;
@@ -4137,7 +4084,7 @@ function _emscripten_get_canvas_size(width, height, isFullscreen) {
  var canvas = Module["canvas"];
  HEAP32[width >> 2] = canvas.width;
  HEAP32[height >> 2] = canvas.height;
- HEAP32[isFullscreen >> 2] = Browser.isFullScreen ? 1 : 0;
+ HEAP32[isFullscreen >> 2] = Browser.isFullscreen ? 1 : 0;
 }
 function _glDrawElements(mode, count, type, indices) {
  GLctx.drawElements(mode, count, type, indices);
@@ -4330,7 +4277,12 @@ if (ENVIRONMENT_IS_NODE) {
  _emscripten_get_now = Date.now;
 }
 Module["requestFullScreen"] = function Module_requestFullScreen(lockPointer, resizeCanvas, vrDevice) {
+ Module.printErr("Module.requestFullScreen is deprecated. Please call Module.requestFullscreen instead.");
+ Module["requestFullScreen"] = Module["requestFullscreen"];
  Browser.requestFullScreen(lockPointer, resizeCanvas, vrDevice);
+};
+Module["requestFullscreen"] = function Module_requestFullscreen(lockPointer, resizeCanvas, vrDevice) {
+ Browser.requestFullscreen(lockPointer, resizeCanvas, vrDevice);
 };
 Module["requestAnimationFrame"] = function Module_requestAnimationFrame(func) {
  Browser.requestAnimationFrame(func);
@@ -4459,14 +4411,6 @@ function invoke_iiiii(index, a1, a2, a3, a4) {
   asm["setThrew"](1, 0);
  }
 }
-function invoke_viiiiii(index, a1, a2, a3, a4, a5, a6) {
- try {
-  Module["dynCall_viiiiii"](index, a1, a2, a3, a4, a5, a6);
- } catch (e) {
-  if (typeof e !== "number" && e !== "longjmp") throw e;
-  asm["setThrew"](1, 0);
- }
-}
 function invoke_iii(index, a1, a2) {
  try {
   return Module["dynCall_iii"](index, a1, a2);
@@ -4519,7 +4463,6 @@ Module.asmLibraryArg = {
  "invoke_v": invoke_v,
  "invoke_viid": invoke_viid,
  "invoke_iiiii": invoke_iiiii,
- "invoke_viiiiii": invoke_viiiiii,
  "invoke_iii": invoke_iii,
  "invoke_iiiiii": invoke_iiiiii,
  "invoke_viiii": invoke_viiii,
@@ -4531,10 +4474,9 @@ Module.asmLibraryArg = {
  "_glUniformMatrix4fv": _glUniformMatrix4fv,
  "_llvm_fabs_f64": _llvm_fabs_f64,
  "_glDeleteProgram": _glDeleteProgram,
- "__ZSt18uncaught_exceptionv": __ZSt18uncaught_exceptionv,
  "_glBindBuffer": _glBindBuffer,
  "_glCreateProgram": _glCreateProgram,
- "_emscripten_webgl_make_context_current": _emscripten_webgl_make_context_current,
+ "_emscripten_request_fullscreen_strategy": _emscripten_request_fullscreen_strategy,
  "_emscripten_set_touchmove_callback": _emscripten_set_touchmove_callback,
  "_emscripten_set_main_loop_timing": _emscripten_set_main_loop_timing,
  "_sbrk": _sbrk,
@@ -4544,9 +4486,8 @@ Module.asmLibraryArg = {
  "_emscripten_set_touchstart_callback": _emscripten_set_touchstart_callback,
  "_glStencilOp": _glStencilOp,
  "_glUniform4f": _glUniform4f,
- "___resumeException": ___resumeException,
  "_emscripten_get_canvas_size": _emscripten_get_canvas_size,
- "_emscripten_request_fullscreen_strategy": _emscripten_request_fullscreen_strategy,
+ "_emscripten_webgl_make_context_current": _emscripten_webgl_make_context_current,
  "_glGenBuffers": _glGenBuffers,
  "_glShaderSource": _glShaderSource,
  "_pthread_cleanup_push": _pthread_cleanup_push,
@@ -4555,7 +4496,6 @@ Module.asmLibraryArg = {
  "_pthread_cleanup_pop": _pthread_cleanup_pop,
  "_glVertexAttribPointer": _glVertexAttribPointer,
  "__restoreHiddenElements": __restoreHiddenElements,
- "___cxa_find_matching_catch": ___cxa_find_matching_catch,
  "_glDrawElements": _glDrawElements,
  "_glDepthMask": _glDepthMask,
  "_glBufferSubData": _glBufferSubData,
@@ -4588,7 +4528,6 @@ Module.asmLibraryArg = {
  "_glDeleteFramebuffers": _glDeleteFramebuffers,
  "_emscripten_webgl_create_context": _emscripten_webgl_create_context,
  "_glClearColor": _glClearColor,
- "___cxa_allocate_exception": ___cxa_allocate_exception,
  "_emscripten_set_keyup_callback": _emscripten_set_keyup_callback,
  "_glBlendFuncSeparate": _glBlendFuncSeparate,
  "_emscripten_set_mouseup_callback": _emscripten_set_mouseup_callback,
@@ -4599,6 +4538,7 @@ Module.asmLibraryArg = {
  "_glUniform1i": _glUniform1i,
  "_glDrawArrays": _glDrawArrays,
  "_glCreateShader": _glCreateShader,
+ "_llvm_fabs_f32": _llvm_fabs_f32,
  "_emscripten_webgl_init_context_attributes": _emscripten_webgl_init_context_attributes,
  "_glActiveTexture": _glActiveTexture,
  "__setLetterbox": __setLetterbox,
@@ -4618,7 +4558,6 @@ Module.asmLibraryArg = {
  "_emscripten_request_pointerlock": _emscripten_request_pointerlock,
  "emscriptenWebGLComputeImageSize": emscriptenWebGLComputeImageSize,
  "_emscripten_set_keydown_callback": _emscripten_set_keydown_callback,
- "___gxx_personality_v0": ___gxx_personality_v0,
  "_emscripten_set_touchcancel_callback": _emscripten_set_touchcancel_callback,
  "_emscripten_set_mousemove_callback": _emscripten_set_mousemove_callback,
  "_glDeleteRenderbuffers": _glDeleteRenderbuffers,
@@ -4638,7 +4577,6 @@ Module.asmLibraryArg = {
  "_emscripten_set_wheel_callback": _emscripten_set_wheel_callback,
  "___syscall54": ___syscall54,
  "_emscripten_set_main_loop": _emscripten_set_main_loop,
- "___cxa_throw": ___cxa_throw,
  "_glColorMask": _glColorMask,
  "__hideEverythingExceptGivenElement": __hideEverythingExceptGivenElement,
  "_glDisable": _glDisable,
@@ -4672,7 +4610,6 @@ var _malloc = Module["_malloc"] = asm["_malloc"];
 var _i64Add = Module["_i64Add"] = asm["_i64Add"];
 var _memcpy = Module["_memcpy"] = asm["_memcpy"];
 var _enter_soft_fullscreen = Module["_enter_soft_fullscreen"] = asm["_enter_soft_fullscreen"];
-var __GLOBAL__sub_I_ThreadedQueue_cc = Module["__GLOBAL__sub_I_ThreadedQueue_cc"] = asm["__GLOBAL__sub_I_ThreadedQueue_cc"];
 var ___muldi3 = Module["___muldi3"] = asm["___muldi3"];
 var _bitshift64Lshr = Module["_bitshift64Lshr"] = asm["_bitshift64Lshr"];
 var ___uremdi3 = Module["___uremdi3"] = asm["___uremdi3"];
@@ -4690,7 +4627,6 @@ var dynCall_viii = Module["dynCall_viii"] = asm["dynCall_viii"];
 var dynCall_v = Module["dynCall_v"] = asm["dynCall_v"];
 var dynCall_viid = Module["dynCall_viid"] = asm["dynCall_viid"];
 var dynCall_iiiii = Module["dynCall_iiiii"] = asm["dynCall_iiiii"];
-var dynCall_viiiiii = Module["dynCall_viiiiii"] = asm["dynCall_viiiiii"];
 var dynCall_iii = Module["dynCall_iii"] = asm["dynCall_iii"];
 var dynCall_iiiiii = Module["dynCall_iiiiii"] = asm["dynCall_iiiiii"];
 var dynCall_viiii = Module["dynCall_viiii"] = asm["dynCall_viiii"];

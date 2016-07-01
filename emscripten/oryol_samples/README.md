@@ -1,12 +1,12 @@
 ### Oryol Samples
 
-This is a selection of Oryol samples compiled to wasm, wast and asm.js
+This is the complete set of Oryol samples compiled to wasm, wast and asm.js
 with the original emscripten shell-html files which fall back to 
 asm.js if wasm is not available.
 
 The samples are built with Binaryen, using the method "wasm-native,asmjs".
 
-All samples require a WebGL canvas.
+Most samples require a WebGL canvas.
 
 The original sample web page is here: http://floooh.github.io/oryol/
 
@@ -19,6 +19,12 @@ of the HTML files.
 
 This tries to load the wasm samples, and if these are not available
 falls back to asm.js.
+
+The only demo that runs out of the box in a vanilla JS engine is 'hello.js':
+
+```
+> node hello.js
+```
 
 #### How to build
 
